@@ -1,7 +1,7 @@
 <template>
   <v-app :theme="theme">
-    <!-- Top Navigation Bar -->
-    <v-app-bar color="primary" elevation="2" density="default">
+    <!-- Navigation bar — hidden on auth/onboarding pages -->
+    <v-app-bar v-if="showShell" color="primary" elevation="2" density="default">
       <v-app-bar-title>
         <v-icon icon="mdi-map-marker-star" class="mr-2" />
         Tunisia Tourist Guide
@@ -12,7 +12,6 @@
         <v-btn variant="text" to="/explore" color="white">Explore</v-btn>
         <v-btn variant="text" to="/itineraries/create" color="white">Itineraries</v-btn>
         <v-btn variant="text" to="/flights" color="white">Flights</v-btn>
-        <v-btn variant="text" to="/profile/me" color="white">Profile</v-btn>
         <v-btn variant="text" icon color="white">
           <v-icon>mdi-bookmark-outline</v-icon>
         </v-btn>
@@ -22,8 +21,50 @@
           <v-icon>mdi-cog-outline</v-icon>
         </v-btn>
 
-        <!-- Avatar -->
-        <v-avatar color="secondary" size="36" class="mx-2" style="cursor:pointer" @click="$router.push('/profile/me')">
+        <!-- User avatar menu -->
+        <v-menu v-if="isAuthenticated" offset-y>
+          <template v-slot:activator="{ props: menuProps }">
+            <v-avatar
+              color="secondary"
+              size="36"
+              class="mx-2"
+              style="cursor:pointer"
+              v-bind="menuProps"
+            >
+              <v-icon icon="mdi-account" color="white" />
+            </v-avatar>
+          </template>
+          <v-list density="compact" min-width="200">
+            <v-list-item
+              prepend-icon="mdi-account-circle-outline"
+              :title="currentUser?.fullName || 'My Profile'"
+              :subtitle="currentUser?.email"
+              :to="`/profile/${currentUser?.username || 'me'}`"
+            />
+            <v-divider />
+            <v-list-item
+              prepend-icon="mdi-cog-outline"
+              title="Settings"
+              @click="settingsDialog = true"
+            />
+            <v-list-item
+              prepend-icon="mdi-logout"
+              title="Log out"
+              base-color="error"
+              @click="logout"
+            />
+          </v-list>
+        </v-menu>
+
+        <!-- Guest avatar (not logged in) -->
+        <v-avatar
+          v-else
+          color="secondary"
+          size="36"
+          class="mx-2"
+          style="cursor:pointer"
+          @click="$router.push('/login')"
+        >
           <v-icon icon="mdi-account" color="white" />
         </v-avatar>
       </template>
@@ -34,8 +75,8 @@
       <router-view />
     </v-main>
 
-    <!-- Footer -->
-    <v-footer color="surface" border="t" class="py-4">
+    <!-- Footer — hidden on auth/onboarding pages -->
+    <v-footer v-if="showShell" color="surface" border="t" class="py-4">
       <v-container>
         <v-row align="center" justify="space-between">
           <v-col cols="12" md="4">
@@ -83,17 +124,50 @@
 
     <!-- Settings Modal -->
     <SettingsModal v-model="settingsDialog" @update:theme="theme = $event" />
+
+    <!-- Session-expired snackbar -->
+    <v-snackbar
+      v-model="showExpiredNotice"
+      color="warning"
+      timeout="5000"
+      location="top"
+    >
+      <v-icon class="mr-2">mdi-clock-alert-outline</v-icon>
+      Your session has expired. Please log in again.
+      <template v-slot:actions>
+        <v-btn variant="text" icon @click="showExpiredNotice = false">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-app>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import SettingsModal from './components/SettingsModal.vue'
+import { useAuth } from './composables/useAuth'
+
+const { isAuthenticated, currentUser, authError, logout } = useAuth()
 
 const settingsDialog = ref(false)
 const theme = ref('tunisiaTheme')
 const language = ref('English')
 const languages = ['English', 'Arabic', 'French']
+
+// Hide navbar/footer on login and onboarding pages
+const route = useRoute()
+const AUTH_ROUTES = ['/login', '/onboarding']
+const showShell = computed(() => !AUTH_ROUTES.includes(route.path))
+
+// Show a snackbar when authError contains the session-expired message
+const showExpiredNotice = ref(false)
+watch(authError, (msg) => {
+  if (msg && msg.includes('expired')) {
+    showExpiredNotice.value = true
+  }
+})
 </script>
 
 <style>
