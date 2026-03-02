@@ -22,7 +22,12 @@
             class="mb-1"
           />
           <div class="text-right mb-4">
-            <a href="#" class="text-caption" style="color:#E07A2F">Forgot password?</a>
+            <a
+              href="#"
+              class="text-caption"
+              style="color:#E07A2F"
+              @click.prevent="forgotDialog = true"
+            >Forgot password?</a>
           </div>
 
           <v-btn color="primary" block size="large" @click="handleLogin" class="mb-3">Log in</v-btn>
@@ -71,21 +76,28 @@
         </template>
       </v-snackbar>
     </v-col>
+
+    <!-- Forgot Password Modal -->
+    <ForgotPasswordModal v-model="forgotDialog" />
   </v-container>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import EmailVerification from '../components/EmailVerification.vue'
+import ForgotPasswordModal from '../components/ForgotPasswordModal.vue'
+import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
+const { login, signup, authError } = useAuth()
 
 const isSignup = ref(false)
 const showVerification = ref(false)
 const showPassword = ref(false)
 const loginError = ref(false)
 const errorMessage = ref('')
+const forgotDialog = ref(false)
 
 const email = ref('')
 const password = ref('')
@@ -93,19 +105,30 @@ const fullName = ref('')
 const confirmPassword = ref('')
 const agreeTerms = ref(false)
 
-function handleLogin() {
-  if (!email.value || !password.value) {
-    errorMessage.value = 'Please enter your email and password.'
+// Mirror authError into local error snackbar
+watch(authError, (msg) => {
+  if (msg) {
+    errorMessage.value = msg
     loginError.value = true
-    return
   }
-  // Mock: any credentials work
-  router.push('/home')
+})
+
+function handleLogin() {
+  const ok = login(email.value, password.value)
+  if (!ok) return
+
+  // Redirect: if user hasn't completed onboarding, send them there first
+  const onboarded = localStorage.getItem('ttg_onboarded')
+  if (!onboarded) {
+    router.push('/onboarding')
+  } else {
+    router.push('/home')
+  }
 }
 
 function handleSignup() {
-  if (!fullName.value || !email.value || !password.value) {
-    errorMessage.value = 'Please fill in all required fields.'
+  if (!agreeTerms.value) {
+    errorMessage.value = 'Please agree to the Terms & Conditions.'
     loginError.value = true
     return
   }
@@ -114,6 +137,9 @@ function handleSignup() {
     loginError.value = true
     return
   }
+  const ok = signup(fullName.value, email.value, password.value)
+  if (!ok) return
+
   showVerification.value = true
   isSignup.value = false
 }

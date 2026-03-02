@@ -37,7 +37,7 @@
         block
         style="max-width:400px; margin:0 auto"
         :disabled="selectedCount === 0"
-        @click="$router.push('/for-you')"
+        @click="handleContinue"
       >
         Continue
         <v-icon end>mdi-arrow-right</v-icon>
@@ -51,6 +51,11 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuth } from '../composables/useAuth'
+
+const router = useRouter()
+const { updateProfile } = useAuth()
 
 const interests = ref([
   { label: 'Sea', icon: 'mdi-waves', selected: false },
@@ -65,6 +70,13 @@ const interests = ref([
 ])
 
 const selectedCount = computed(() => interests.value.filter(i => i.selected).length)
+
+function handleContinue() {
+  const selected = interests.value.filter(i => i.selected).map(i => i.label)
+  updateProfile({ interests: selected })
+  localStorage.setItem('ttg_onboarded', 'true')
+  router.push('/for-you')
+}
 </script>
 
 <style scoped>
