@@ -115,8 +115,8 @@ export function useAuth() {
   }
 
   /**
-   * Mock signup: validates and stores user in the localStorage "database".
-   * Does NOT log the user in automatically – shows email verification first.
+   * Mock signup: validates, stores user in the localStorage "database", and
+   * logs the user in automatically without requiring email verification.
    */
   function signup(fullName, email, password) {
     authError.value = ''
@@ -155,6 +155,11 @@ export function useAuth() {
 
     users.push(newUser)
     saveUsers(users)
+
+    const { password: _pw, ...userWithoutPw } = newUser
+    isAuthenticated.value = true
+    currentUser.value = userWithoutPw
+    persistSession(userWithoutPw)
     return true
   }
 

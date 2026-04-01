@@ -10,7 +10,7 @@
         </div>
 
         <!-- Login Form -->
-        <template v-if="!isSignup && !showVerification">
+        <template v-if="!isSignup">
           <v-text-field v-model="email" label="Email" prepend-inner-icon="mdi-email-outline" class="mb-3" />
           <v-text-field
             v-model="password"
@@ -62,9 +62,6 @@
           <v-btn color="primary" block size="large" @click="handleSignup" class="mb-3">Sign up</v-btn>
           <v-btn variant="text" block @click="isSignup = false">Already have an account? Log in</v-btn>
         </template>
-
-        <!-- Email Verification -->
-        <EmailVerification v-else-if="showVerification" @resend="handleResend" />
       </v-card>
 
       <!-- Login Error Snackbar -->
@@ -85,7 +82,6 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import EmailVerification from '../components/EmailVerification.vue'
 import ForgotPasswordModal from '../components/ForgotPasswordModal.vue'
 import { useAuth } from '../composables/useAuth'
 
@@ -93,7 +89,6 @@ const router = useRouter()
 const { login, signup, authError } = useAuth()
 
 const isSignup = ref(false)
-const showVerification = ref(false)
 const showPassword = ref(false)
 const loginError = ref(false)
 const errorMessage = ref('')
@@ -140,11 +135,11 @@ function handleSignup() {
   const ok = signup(fullName.value, email.value, password.value)
   if (!ok) return
 
-  showVerification.value = true
-  isSignup.value = false
-}
-
-function handleResend() {
-  // Mock resend
+  const onboarded = localStorage.getItem('ttg_onboarded')
+  if (!onboarded) {
+    router.push('/onboarding')
+  } else {
+    router.push('/home')
+  }
 }
 </script>
