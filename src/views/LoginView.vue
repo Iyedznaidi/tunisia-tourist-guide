@@ -57,6 +57,15 @@
             prepend-inner-icon="mdi-lock-check-outline"
             class="mb-3"
           />
+          <v-select
+            v-model="role"
+            :items="roleOptions"
+            item-title="label"
+            item-value="value"
+            label="I am a..."
+            prepend-inner-icon="mdi-account-badge-outline"
+            class="mb-3"
+          />
           <v-checkbox v-model="agreeTerms" label="I agree to the Terms & Conditions" density="compact" class="mb-3" />
 
           <v-btn color="primary" block size="large" @click="handleSignup" class="mb-3">Sign up</v-btn>
@@ -98,6 +107,11 @@ const email = ref('')
 const password = ref('')
 const fullName = ref('')
 const confirmPassword = ref('')
+const role = ref('visitor')
+const roleOptions = [
+  { label: 'Visitor (tourist)', value: 'visitor' },
+  { label: 'Host (local organiser)', value: 'host' },
+]
 const agreeTerms = ref(false)
 
 // Mirror authError into local error snackbar
@@ -108,17 +122,15 @@ watch(authError, (msg) => {
   }
 })
 
+function redirectAfterAuth() {
+  const onboarded = localStorage.getItem('ttg_onboarded')
+  router.push(onboarded ? '/home' : '/onboarding')
+}
+
 function handleLogin() {
   const ok = login(email.value, password.value)
   if (!ok) return
-
-  // Redirect: if user hasn't completed onboarding, send them there first
-  const onboarded = localStorage.getItem('ttg_onboarded')
-  if (!onboarded) {
-    router.push('/onboarding')
-  } else {
-    router.push('/home')
-  }
+  redirectAfterAuth()
 }
 
 function handleSignup() {
@@ -132,14 +144,8 @@ function handleSignup() {
     loginError.value = true
     return
   }
-  const ok = signup(fullName.value, email.value, password.value)
+  const ok = signup(fullName.value, email.value, password.value, role.value)
   if (!ok) return
-
-  const onboarded = localStorage.getItem('ttg_onboarded')
-  if (!onboarded) {
-    router.push('/onboarding')
-  } else {
-    router.push('/home')
-  }
+  redirectAfterAuth()
 }
 </script>

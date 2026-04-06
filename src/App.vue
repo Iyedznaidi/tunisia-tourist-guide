@@ -10,6 +10,7 @@
       <template v-slot:append>
         <v-btn variant="text" to="/home" color="white">Home</v-btn>
         <v-btn variant="text" to="/explore" color="white">Explore</v-btn>
+        <v-btn variant="text" to="/events" color="white">Events</v-btn>
         <v-btn variant="text" to="/itineraries/create" color="white">Itineraries</v-btn>
         <v-btn variant="text" to="/flights" color="white">Flights</v-btn>
         <v-btn variant="text" icon color="white">

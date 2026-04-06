@@ -10,6 +10,8 @@ import ItineraryBuilderView from '../views/ItineraryBuilderView.vue'
 import ItineraryPublicView from '../views/ItineraryPublicView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import FlightsView from '../views/FlightsView.vue'
+import EventsView from '../views/EventsView.vue'
+import EventDetailsView from '../views/EventDetailsView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 
 const routes = [
@@ -24,6 +26,8 @@ const routes = [
   { path: '/itineraries/:id', component: ItineraryPublicView, meta: { requiresAuth: true } },
   { path: '/profile/:username', component: ProfileView, meta: { requiresAuth: true } },
   { path: '/flights', component: FlightsView, meta: { requiresAuth: true } },
+  { path: '/events', component: EventsView, meta: { requiresAuth: true } },
+  { path: '/events/:id', component: EventDetailsView, meta: { requiresAuth: true } },
   { path: '/404', component: NotFoundView },
   { path: '/:pathMatch(.*)*', redirect: '/404' },
 ]
