@@ -10,7 +10,7 @@
         </div>
 
         <!-- Login Form -->
-        <template v-if="!isSignup && !showVerification">
+        <template v-if="!isSignup">
           <v-text-field v-model="email" label="Email" prepend-inner-icon="mdi-email-outline" class="mb-3" />
           <v-text-field
             v-model="password"
@@ -57,14 +57,20 @@
             prepend-inner-icon="mdi-lock-check-outline"
             class="mb-3"
           />
+          <v-select
+            v-model="role"
+            :items="roleOptions"
+            item-title="label"
+            item-value="value"
+            label="I am a..."
+            prepend-inner-icon="mdi-account-badge-outline"
+            class="mb-3"
+          />
           <v-checkbox v-model="agreeTerms" label="I agree to the Terms & Conditions" density="compact" class="mb-3" />
 
           <v-btn color="primary" block size="large" @click="handleSignup" class="mb-3">Sign up</v-btn>
           <v-btn variant="text" block @click="isSignup = false">Already have an account? Log in</v-btn>
         </template>
-
-        <!-- Email Verification -->
-        <EmailVerification v-else-if="showVerification" @resend="handleResend" />
       </v-card>
 
       <!-- Login Error Snackbar -->
@@ -85,7 +91,6 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import EmailVerification from '../components/EmailVerification.vue'
 import ForgotPasswordModal from '../components/ForgotPasswordModal.vue'
 import { useAuth } from '../composables/useAuth'
 
@@ -93,7 +98,6 @@ const router = useRouter()
 const { login, signup, authError } = useAuth()
 
 const isSignup = ref(false)
-const showVerification = ref(false)
 const showPassword = ref(false)
 const loginError = ref(false)
 const errorMessage = ref('')
@@ -103,6 +107,11 @@ const email = ref('')
 const password = ref('')
 const fullName = ref('')
 const confirmPassword = ref('')
+const role = ref('visitor')
+const roleOptions = [
+  { label: 'Visitor (tourist)', value: 'visitor' },
+  { label: 'Host (local organiser)', value: 'host' },
+]
 const agreeTerms = ref(false)
 
 // Mirror authError into local error snackbar
@@ -113,17 +122,15 @@ watch(authError, (msg) => {
   }
 })
 
+function redirectAfterAuth() {
+  const onboarded = localStorage.getItem('ttg_onboarded')
+  router.push(onboarded ? '/home' : '/onboarding')
+}
+
 function handleLogin() {
   const ok = login(email.value, password.value)
   if (!ok) return
-
-  // Redirect: if user hasn't completed onboarding, send them there first
-  const onboarded = localStorage.getItem('ttg_onboarded')
-  if (!onboarded) {
-    router.push('/onboarding')
-  } else {
-    router.push('/home')
-  }
+  redirectAfterAuth()
 }
 
 function handleSignup() {
@@ -137,14 +144,8 @@ function handleSignup() {
     loginError.value = true
     return
   }
-  const ok = signup(fullName.value, email.value, password.value)
+  const ok = signup(fullName.value, email.value, password.value, role.value)
   if (!ok) return
-
-  showVerification.value = true
-  isSignup.value = false
-}
-
-function handleResend() {
-  // Mock resend
+  redirectAfterAuth()
 }
 </script>

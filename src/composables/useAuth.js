@@ -98,6 +98,7 @@ export function useAuth() {
         fullName: 'Ahmed Ben Ali',
         email: 'ahmed@example.com',
         username: 'ahmed_adventures',
+        role: 'host',
         avatar: null,
         location: 'Tunis, Tunisia',
         bio: 'Passionate traveler exploring every corner of Tunisia',
@@ -115,10 +116,10 @@ export function useAuth() {
   }
 
   /**
-   * Mock signup: validates and stores user in the localStorage "database".
-   * Does NOT log the user in automatically – shows email verification first.
+   * Mock signup: validates, stores user in the localStorage "database", and
+   * logs the user in automatically without requiring email verification.
    */
-  function signup(fullName, email, password) {
+  function signup(fullName, email, password, role = 'visitor') {
     authError.value = ''
 
     if (!fullName || !email || !password) {
@@ -146,6 +147,7 @@ export function useAuth() {
       // implementation. In a real application, never store plain-text passwords —
       // always use a proper hashing algorithm (e.g. bcrypt) on the server.
       password,
+      role: role || 'visitor',
       avatar: null,
       location: '',
       bio: '',
@@ -155,6 +157,11 @@ export function useAuth() {
 
     users.push(newUser)
     saveUsers(users)
+
+    const { password: _pw, ...userWithoutPw } = newUser
+    isAuthenticated.value = true
+    currentUser.value = userWithoutPw
+    persistSession(userWithoutPw)
     return true
   }
 
