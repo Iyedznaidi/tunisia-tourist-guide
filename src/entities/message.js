@@ -43,7 +43,8 @@ export function get_messages_by_event_id(eventId) {
 export function update_message_by_id(id, updates) {
   const idx = MESSAGE_LIST.findIndex((message) => message.id === Number(id))
   if (idx === -1) return null
-  MESSAGE_LIST[idx] = { ...MESSAGE_LIST[idx], ...updates }
+  Object.assign(MESSAGE_LIST[idx], updates)
+  MESSAGE_LIST[idx].eventId = Number(MESSAGE_LIST[idx].eventId)
   return MESSAGE_LIST[idx]
 }
 

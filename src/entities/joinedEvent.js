@@ -34,7 +34,8 @@ export function get_joined_event_by_event_id(eventId) {
 export function update_joined_event_by_event_id(eventId, updates) {
   const idx = JOINED_EVENT_LIST.findIndex((joinedEvent) => joinedEvent.eventId === Number(eventId))
   if (idx === -1) return null
-  JOINED_EVENT_LIST[idx] = { ...JOINED_EVENT_LIST[idx], ...updates }
+  Object.assign(JOINED_EVENT_LIST[idx], updates)
+  JOINED_EVENT_LIST[idx].eventId = Number(JOINED_EVENT_LIST[idx].eventId)
   return JOINED_EVENT_LIST[idx]
 }
 

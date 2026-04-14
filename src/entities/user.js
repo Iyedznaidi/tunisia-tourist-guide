@@ -55,7 +55,7 @@ export function get_user_by_email(email) {
 export function update_user_by_email(email, updates) {
   const idx = USER_LIST.findIndex((user) => user.email.toLowerCase() === email.toLowerCase())
   if (idx === -1) return null
-  USER_LIST[idx] = { ...USER_LIST[idx], ...updates }
+  Object.assign(USER_LIST[idx], updates)
   return USER_LIST[idx]
 }
 

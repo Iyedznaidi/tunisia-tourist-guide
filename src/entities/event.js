@@ -57,7 +57,7 @@ export function get_event_by_id(id) {
 export function update_event_by_id(id, updates) {
   const idx = EVENT_LIST.findIndex((event) => event.id === Number(id))
   if (idx === -1) return null
-  EVENT_LIST[idx] = { ...EVENT_LIST[idx], ...updates }
+  Object.assign(EVENT_LIST[idx], updates)
   return EVENT_LIST[idx]
 }
 

@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import {
-  add_event,
+  Event,
   get_all_events,
   get_event_by_id,
   set_all_events,
@@ -249,8 +249,8 @@ export function useEvents() {
    * Simulate POST /api/events.
    * Creates a new event and persists it to localStorage.
    */
-function createEvent(eventData, currentUser) {
-    const newEvent = {
+  function createEvent(eventData, currentUser) {
+    const newEvent = new Event({
       id: Date.now(),
       ...eventData,
       tags: eventData.tags?.length ? eventData.tags : [eventData.type],
@@ -258,7 +258,7 @@ function createEvent(eventData, currentUser) {
       hostName: currentUser.fullName,
       attendees: 0,
       createdAt: new Date().toISOString().split('T')[0],
-    }
+    })
     set_all_events([newEvent, ...get_all_events()])
     events.value = [...get_all_events()]
     chatMessages.value = { ...chatMessages.value, [newEvent.id]: [] }
@@ -270,7 +270,7 @@ function createEvent(eventData, currentUser) {
   /**
    * Simulate POST /api/events/:eventId/join.
    */
-function joinEvent(eventId) {
+  function joinEvent(eventId) {
     const id = Number(eventId)
     if (get_joined_event_by_event_id(id)) return
     add_joined_event(id)
@@ -291,7 +291,7 @@ function joinEvent(eventId) {
   /**
    * Remove the current user from an event.
    */
-function leaveEvent(eventId) {
+  function leaveEvent(eventId) {
     const id = Number(eventId)
     delete_joined_event_by_event_id(id)
     joinedEventIds.value = get_all_joined_events().map((joinedEvent) => joinedEvent.eventId)
@@ -307,9 +307,9 @@ function leaveEvent(eventId) {
   }
 
   /** Check whether the current user has joined a given event. */
-function isJoined(eventId) {
+  function isJoined(eventId) {
     return !!get_joined_event_by_event_id(eventId)
-}
+  }
 
   /**
    * Simulate GET /api/events/:eventId/messages.
@@ -323,7 +323,7 @@ function isJoined(eventId) {
   /**
    * Add a message to an event's chat room.
    */
-function sendMessage(eventId, currentUser, text) {
+  function sendMessage(eventId, currentUser, text) {
     if (!text.trim()) return
     const id = Number(eventId)
     const message = {
@@ -341,9 +341,9 @@ function sendMessage(eventId, currentUser, text) {
     return message
   }
 
-function getEventById(id) {
+  function getEventById(id) {
     return get_event_by_id(id)
-}
+  }
 
   function getMessages(eventId) {
     return chatMessages.value[Number(eventId)] || []
