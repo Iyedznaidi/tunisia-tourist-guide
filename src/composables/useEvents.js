@@ -1,4 +1,22 @@
 import { ref } from 'vue'
+import {
+  Event,
+  get_all_events,
+  get_event_by_id,
+  set_all_events,
+  update_event_by_id,
+} from '../entities/event'
+import {
+  add_joined_event,
+  delete_joined_event_by_event_id,
+  get_all_joined_events,
+  get_joined_event_by_event_id,
+  set_all_joined_events,
+} from '../entities/joinedEvent'
+import {
+  add_message,
+  set_all_messages,
+} from '../entities/message'
 
 // ─── LocalStorage keys ─────────────────────────────────────────────────────────
 const EVENTS_KEY = 'ttg_events'
@@ -150,34 +168,43 @@ function loadFromStorage() {
   try {
     const storedEvents = localStorage.getItem(EVENTS_KEY)
     if (storedEvents) {
-      events.value = JSON.parse(storedEvents)
+      set_all_events(JSON.parse(storedEvents))
+      events.value = [...get_all_events()]
     } else {
-      events.value = [...SEED_EVENTS]
-      localStorage.setItem(EVENTS_KEY, JSON.stringify(events.value))
+      set_all_events(SEED_EVENTS)
+      events.value = [...get_all_events()]
+      localStorage.setItem(EVENTS_KEY, JSON.stringify(get_all_events()))
     }
 
     const storedJoined = localStorage.getItem(JOINED_KEY)
-    joinedEventIds.value = storedJoined ? JSON.parse(storedJoined) : []
+    set_all_joined_events(storedJoined ? JSON.parse(storedJoined) : [])
+    joinedEventIds.value = get_all_joined_events().map((joinedEvent) => joinedEvent.eventId)
 
     const storedMessages = localStorage.getItem(MESSAGES_KEY)
     if (storedMessages) {
       // localStorage keys are strings; convert them to numbers for consistency
       const parsed = JSON.parse(storedMessages)
+      const messages = Object.values(parsed).flat()
+      set_all_messages(messages)
       chatMessages.value = Object.fromEntries(
         Object.entries(parsed).map(([k, v]) => [Number(k), v]),
       )
     } else {
       chatMessages.value = { ...SEED_MESSAGES }
+      const messages = Object.values(SEED_MESSAGES).flat()
+      set_all_messages(messages)
       localStorage.setItem(MESSAGES_KEY, JSON.stringify(chatMessages.value))
     }
   } catch {
-    events.value = [...SEED_EVENTS]
+    set_all_events(SEED_EVENTS)
+    events.value = [...get_all_events()]
     chatMessages.value = { ...SEED_MESSAGES }
+    set_all_messages(Object.values(SEED_MESSAGES).flat())
   }
 }
 
 function saveEvents() {
-  localStorage.setItem(EVENTS_KEY, JSON.stringify(events.value))
+  localStorage.setItem(EVENTS_KEY, JSON.stringify(get_all_events()))
 }
 
 function saveJoined() {
@@ -223,7 +250,7 @@ export function useEvents() {
    * Creates a new event and persists it to localStorage.
    */
   function createEvent(eventData, currentUser) {
-    const newEvent = {
+    const newEvent = new Event({
       id: Date.now(),
       ...eventData,
       tags: eventData.tags?.length ? eventData.tags : [eventData.type],
@@ -231,8 +258,9 @@ export function useEvents() {
       hostName: currentUser.fullName,
       attendees: 0,
       createdAt: new Date().toISOString().split('T')[0],
-    }
-    events.value = [newEvent, ...events.value]
+    })
+    set_all_events([newEvent, ...get_all_events()])
+    events.value = [...get_all_events()]
     chatMessages.value = { ...chatMessages.value, [newEvent.id]: [] }
     saveEvents()
     saveMessages()
@@ -244,14 +272,14 @@ export function useEvents() {
    */
   function joinEvent(eventId) {
     const id = Number(eventId)
-    if (joinedEventIds.value.includes(id)) return
-    joinedEventIds.value = [...joinedEventIds.value, id]
+    if (get_joined_event_by_event_id(id)) return
+    add_joined_event(id)
+    joinedEventIds.value = get_all_joined_events().map((joinedEvent) => joinedEvent.eventId)
 
-    const idx = events.value.findIndex((e) => e.id === id)
-    if (idx !== -1) {
-      events.value = events.value.map((e, i) =>
-        i === idx ? { ...e, attendees: e.attendees + 1 } : e,
-      )
+    const event = get_event_by_id(id)
+    if (event) {
+      update_event_by_id(id, { attendees: event.attendees + 1 })
+      events.value = [...get_all_events()]
     }
 
     ensureChatExists(id)
@@ -265,13 +293,13 @@ export function useEvents() {
    */
   function leaveEvent(eventId) {
     const id = Number(eventId)
-    joinedEventIds.value = joinedEventIds.value.filter((eid) => eid !== id)
+    delete_joined_event_by_event_id(id)
+    joinedEventIds.value = get_all_joined_events().map((joinedEvent) => joinedEvent.eventId)
 
-    const idx = events.value.findIndex((e) => e.id === id)
-    if (idx !== -1) {
-      events.value = events.value.map((e, i) =>
-        i === idx ? { ...e, attendees: Math.max(0, e.attendees - 1) } : e,
-      )
+    const event = get_event_by_id(id)
+    if (event) {
+      update_event_by_id(id, { attendees: Math.max(0, event.attendees - 1) })
+      events.value = [...get_all_events()]
     }
 
     saveJoined()
@@ -280,7 +308,7 @@ export function useEvents() {
 
   /** Check whether the current user has joined a given event. */
   function isJoined(eventId) {
-    return joinedEventIds.value.includes(Number(eventId))
+    return !!get_joined_event_by_event_id(eventId)
   }
 
   /**
@@ -306,6 +334,7 @@ export function useEvents() {
       text: text.trim(),
       timestamp: new Date().toISOString(),
     }
+    add_message(message)
     const existing = chatMessages.value[id] || []
     chatMessages.value = { ...chatMessages.value, [id]: [...existing, message] }
     saveMessages()
@@ -313,7 +342,7 @@ export function useEvents() {
   }
 
   function getEventById(id) {
-    return events.value.find((e) => e.id === Number(id)) || null
+    return get_event_by_id(id)
   }
 
   function getMessages(eventId) {
