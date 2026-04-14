@@ -27,6 +27,19 @@ export class User {
 }
 
 export const USER_LIST = []
+const USER_FIELDS = [
+  'id',
+  'fullName',
+  'email',
+  'username',
+  'password',
+  'role',
+  'avatar',
+  'location',
+  'bio',
+  'interests',
+  'joinedDate',
+]
 
 export function get_all_users() {
   return USER_LIST
@@ -55,7 +68,11 @@ export function get_user_by_email(email) {
 export function update_user_by_email(email, updates) {
   const idx = USER_LIST.findIndex((user) => user.email.toLowerCase() === email.toLowerCase())
   if (idx === -1) return null
-  Object.assign(USER_LIST[idx], updates)
+  Object.keys(updates).forEach((key) => {
+    if (USER_FIELDS.includes(key)) {
+      USER_LIST[idx][key] = updates[key]
+    }
+  })
   return USER_LIST[idx]
 }
 

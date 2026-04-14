@@ -35,6 +35,23 @@ export class Event {
 }
 
 export const EVENT_LIST = []
+const EVENT_FIELDS = [
+  'id',
+  'title',
+  'description',
+  'type',
+  'location',
+  'date',
+  'time',
+  'maxAttendees',
+  'attendees',
+  'price',
+  'hostId',
+  'hostName',
+  'image',
+  'tags',
+  'createdAt',
+]
 
 export function get_all_events() {
   return EVENT_LIST
@@ -57,7 +74,11 @@ export function get_event_by_id(id) {
 export function update_event_by_id(id, updates) {
   const idx = EVENT_LIST.findIndex((event) => event.id === Number(id))
   if (idx === -1) return null
-  Object.assign(EVENT_LIST[idx], updates)
+  Object.keys(updates).forEach((key) => {
+    if (EVENT_FIELDS.includes(key)) {
+      EVENT_LIST[idx][key] = updates[key]
+    }
+  })
   return EVENT_LIST[idx]
 }
 

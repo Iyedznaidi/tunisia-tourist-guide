@@ -17,6 +17,14 @@ export class Message {
 }
 
 export const MESSAGE_LIST = []
+const MESSAGE_FIELDS = [
+  'id',
+  'eventId',
+  'senderId',
+  'senderName',
+  'text',
+  'timestamp',
+]
 
 export function get_all_messages() {
   return MESSAGE_LIST
@@ -43,7 +51,11 @@ export function get_messages_by_event_id(eventId) {
 export function update_message_by_id(id, updates) {
   const idx = MESSAGE_LIST.findIndex((message) => message.id === Number(id))
   if (idx === -1) return null
-  Object.assign(MESSAGE_LIST[idx], updates)
+  Object.keys(updates).forEach((key) => {
+    if (MESSAGE_FIELDS.includes(key)) {
+      MESSAGE_LIST[idx][key] = updates[key]
+    }
+  })
   return MESSAGE_LIST[idx]
 }
 
