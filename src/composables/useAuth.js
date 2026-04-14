@@ -1,5 +1,13 @@
 import { ref } from 'vue'
 import router from '../router'
+import {
+  add_user,
+  get_all_users,
+  get_user_by_email,
+  get_user_by_email_and_password,
+  set_all_users,
+  update_user_by_email,
+} from '../entities/user'
 
 // ─── Reactive State ────────────────────────────────────────────────────────────
 const isAuthenticated = ref(false)
@@ -16,8 +24,11 @@ const SESSION_KEY = 'ttg_session'
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function loadUsers() {
   try {
-    return JSON.parse(localStorage.getItem(USERS_KEY) || '[]')
+    const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]')
+    set_all_users(users)
+    return get_all_users()
   } catch {
+    set_all_users([])
     return []
   }
 }
@@ -78,10 +89,8 @@ export function useAuth() {
     }
 
     // Check registered users first
-    const users = loadUsers()
-    const found = users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password,
-    )
+    loadUsers()
+    const found = get_user_by_email_and_password(email, password)
 
     if (found) {
       const { password: _pw, ...userWithoutPw } = found // don't store password in state
@@ -127,8 +136,8 @@ export function useAuth() {
       return false
     }
 
-    const users = loadUsers()
-    if (users.find((u) => u.email.toLowerCase() === email.toLowerCase())) {
+    loadUsers()
+    if (get_user_by_email(email)) {
       authError.value = 'An account with this email already exists.'
       return false
     }
@@ -155,8 +164,8 @@ export function useAuth() {
       joinedDate: new Date().toISOString().split('T')[0],
     }
 
-    users.push(newUser)
-    saveUsers(users)
+    add_user(newUser)
+    saveUsers(get_all_users())
 
     const { password: _pw, ...userWithoutPw } = newUser
     isAuthenticated.value = true
@@ -198,11 +207,10 @@ export function useAuth() {
     }
 
     // Also update the user record in the mock user DB if it exists there
-    const users = loadUsers()
-    const idx = users.findIndex((u) => u.email === currentUser.value.email)
-    if (idx !== -1) {
-      users[idx] = { ...users[idx], ...updates }
-      saveUsers(users)
+    loadUsers()
+    const updatedUser = update_user_by_email(currentUser.value.email, updates)
+    if (updatedUser) {
+      saveUsers(get_all_users())
     }
   }
 
