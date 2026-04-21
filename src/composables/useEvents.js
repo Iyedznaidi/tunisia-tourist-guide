@@ -8,9 +8,9 @@ import {
 } from '../entities/event'
 import {
   add_joined_event,
-  delete_joined_event_by_event_id,
+  delete_joined_event_by_user_and_event,
   get_all_joined_events,
-  get_joined_event_by_event_id,
+  get_joined_event_by_user_and_event,
   set_all_joined_events,
 } from '../entities/joinedEvent'
 import {
@@ -158,7 +158,7 @@ const SEED_MESSAGES = {
 
 // ─── Module-level reactive state (singleton across all component instances) ─────
 const events = ref([])
-const joinedEventIds = ref([]) // Array<Number>
+const joinedEventIds = ref([]) // Array<{ userId, eventId }>
 const chatMessages = ref({})   // { [eventId]: Message[] }
 const loading = ref(false)
 const error = ref('')
@@ -177,8 +177,28 @@ function loadFromStorage() {
     }
 
     const storedJoined = localStorage.getItem(JOINED_KEY)
-    set_all_joined_events(storedJoined ? JSON.parse(storedJoined) : [])
-    joinedEventIds.value = get_all_joined_events().map((joinedEvent) => joinedEvent.eventId)
+    if (storedJoined) {
+      const raw = JSON.parse(storedJoined)
+      // Migrate old format (array of numbers) to new format (array of {userId, eventId})
+      if (raw.length > 0 && typeof raw[0] === 'number') {
+        try {
+          const session = JSON.parse(localStorage.getItem('ttg_session') || 'null')
+          const userId = session?.id ?? null
+          if (userId !== null) {
+            set_all_joined_events(raw.map((eventId) => ({ userId, eventId })))
+          } else {
+            set_all_joined_events([])
+          }
+        } catch {
+          set_all_joined_events([])
+        }
+      } else {
+        set_all_joined_events(raw)
+      }
+    } else {
+      set_all_joined_events([])
+    }
+    joinedEventIds.value = [...get_all_joined_events()]
 
     const storedMessages = localStorage.getItem(MESSAGES_KEY)
     if (storedMessages) {
@@ -208,7 +228,7 @@ function saveEvents() {
 }
 
 function saveJoined() {
-  localStorage.setItem(JOINED_KEY, JSON.stringify(joinedEventIds.value))
+  localStorage.setItem(JOINED_KEY, JSON.stringify(get_all_joined_events()))
 }
 
 function saveMessages() {
@@ -270,11 +290,12 @@ export function useEvents() {
   /**
    * Simulate POST /api/events/:eventId/join.
    */
-  function joinEvent(eventId) {
+  function joinEvent(eventId, currentUser) {
+    if (!currentUser) return
     const id = Number(eventId)
-    if (get_joined_event_by_event_id(id)) return
-    add_joined_event(id)
-    joinedEventIds.value = get_all_joined_events().map((joinedEvent) => joinedEvent.eventId)
+    if (get_joined_event_by_user_and_event(currentUser.id, id)) return
+    add_joined_event({ userId: currentUser.id, eventId: id })
+    joinedEventIds.value = [...get_all_joined_events()]
 
     const event = get_event_by_id(id)
     if (event) {
@@ -291,15 +312,18 @@ export function useEvents() {
   /**
    * Remove the current user from an event.
    */
-  function leaveEvent(eventId) {
+  function leaveEvent(eventId, currentUser) {
+    if (!currentUser) return
     const id = Number(eventId)
-    delete_joined_event_by_event_id(id)
-    joinedEventIds.value = get_all_joined_events().map((joinedEvent) => joinedEvent.eventId)
+    const wasJoined = delete_joined_event_by_user_and_event(currentUser.id, id)
+    joinedEventIds.value = [...get_all_joined_events()]
 
-    const event = get_event_by_id(id)
-    if (event) {
-      update_event_by_id(id, { attendees: Math.max(0, event.attendees - 1) })
-      events.value = [...get_all_events()]
+    if (wasJoined) {
+      const event = get_event_by_id(id)
+      if (event) {
+        update_event_by_id(id, { attendees: Math.max(0, event.attendees - 1) })
+        events.value = [...get_all_events()]
+      }
     }
 
     saveJoined()
@@ -307,8 +331,10 @@ export function useEvents() {
   }
 
   /** Check whether the current user has joined a given event. */
-  function isJoined(eventId) {
-    return !!get_joined_event_by_event_id(eventId)
+  function isJoined(eventId, currentUser) {
+    if (!currentUser) return false
+    const id = Number(eventId)
+    return joinedEventIds.value.some((j) => j.userId === currentUser.id && j.eventId === id)
   }
 
   /**
