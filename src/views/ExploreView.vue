@@ -76,8 +76,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import EmptyState from '../components/EmptyState.vue'
+import { useActivities } from '../composables/useActivities'
 
 const search = ref('')
 const filterLocation = ref(null)
@@ -86,27 +87,27 @@ const filterRating = ref(null)
 const filterSort = ref('Popularity')
 const page = ref(1)
 
-const locations = ['Tunis', 'Hammamet', 'Sousse', 'Douz', 'Djerba', 'Sfax', 'El Jem', 'Sidi Bou Said']
-const interestOptions = ['Sea', 'Desert', 'Hiking', 'Culture', 'Food', 'History', 'City Life', 'Music']
+const locations = ['Tunis', 'Hammamet', 'Sousse', 'Douz', 'Djerba', 'Sfax', 'El Jem', 'Sidi Bou Said', 'Bizerte']
+const interestOptions = ['Sea', 'Desert', 'Hiking', 'Culture', 'Food', 'History', 'City Life', 'Music', 'Nature', 'Adventure']
 const ratingOptions = ['4.5+', '4.0+', '3.5+']
 const sortOptions = ['Popularity', 'Rating', 'Newest']
 
-const places = ref([
-  { id: 1, name: 'Medina of Tunis', city: 'Tunis', tags: ['Culture', 'History'], rating: 4.8, description: 'Explore UNESCO-listed winding alleyways and souks.', image: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400' },
-  { id: 2, name: 'Sahara Desert Tour', city: 'Douz', tags: ['Desert', 'Adventure'], rating: 4.9, description: 'Ride camels and camp under Saharan skies.', image: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400' },
-  { id: 3, name: 'Hammamet Beach', city: 'Hammamet', tags: ['Sea', 'Relax'], rating: 4.7, description: 'Crystal clear Mediterranean waters.', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400' },
-  { id: 4, name: 'El Jem Amphitheatre', city: 'El Jem', tags: ['History'], rating: 4.8, description: 'One of the best-preserved Roman colosseums.', image: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400' },
-  { id: 5, name: 'Sidi Bou Said', city: 'Tunis', tags: ['Culture', 'City Life'], rating: 4.6, description: 'The iconic blue-and-white village.', image: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=400' },
-  { id: 6, name: 'Djerba Island', city: 'Djerba', tags: ['Sea', 'Relax'], rating: 4.7, description: 'Island getaway with pristine beaches.', image: 'https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=400' },
-  { id: 7, name: 'Bardo Museum', city: 'Tunis', tags: ['History', 'Culture'], rating: 4.5, description: 'Home to the world\'s finest collection of Roman mosaics.', image: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=400' },
-  { id: 8, name: 'Ichkeul National Park', city: 'Bizerte', tags: ['Hiking', 'Nature'], rating: 4.4, description: 'UNESCO biosphere reserve with diverse wildlife.', image: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400' },
-])
+const { activities: places, fetchActivities } = useActivities()
+
+onMounted(() => {
+  fetchActivities()
+})
 
 const filteredPlaces = computed(() => {
   let result = places.value
   if (search.value) result = result.filter(p => p.name.toLowerCase().includes(search.value.toLowerCase()) || p.city.toLowerCase().includes(search.value.toLowerCase()))
   if (filterLocation.value) result = result.filter(p => p.city === filterLocation.value)
   if (filterInterest.value) result = result.filter(p => p.tags.includes(filterInterest.value))
+  if (filterRating.value) {
+    const min = parseFloat(filterRating.value)
+    result = result.filter(p => p.rating >= min)
+  }
+  if (filterSort.value === 'Rating') result = [...result].sort((a, b) => b.rating - a.rating)
   return result
 })
 </script>

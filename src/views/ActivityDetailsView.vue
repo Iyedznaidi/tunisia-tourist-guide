@@ -1,5 +1,6 @@
 <template>
   <div>
+    <template v-if="activity">
     <!-- Header Image -->
     <v-img :src="activity.image" height="380" cover>
       <div class="fill-height" style="background:linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7))">
@@ -64,7 +65,7 @@
                 <v-icon color="white" size="18">mdi-account</v-icon>
               </v-avatar>
               <div>
-                <div class="text-subtitle-2 font-weight-bold">{{ review.user }}</div>
+                <div class="text-subtitle-2 font-weight-bold">{{ review.authorName }}</div>
                 <div class="text-caption text-medium-emphasis">{{ review.date }}</div>
               </div>
               <v-spacer />
@@ -108,45 +109,63 @@
     </v-container>
 
     <!-- Modals -->
-    <AddReviewModal v-model="reviewDialog" />
+    <AddReviewModal v-model="reviewDialog" @submitted="handleReviewSubmitted" />
     <AddToItineraryModal v-model="addToItineraryDialog" :activity="activity" />
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AddReviewModal from '../components/AddReviewModal.vue'
 import AddToItineraryModal from '../components/AddToItineraryModal.vue'
+import { useActivities } from '../composables/useActivities'
+import { useReviews } from '../composables/useReviews'
+import { useAuth } from '../composables/useAuth'
 
 const route = useRoute()
 const reviewDialog = ref(false)
 const addToItineraryDialog = ref(false)
 
-// Mock activity data (in a real app, fetch by route.params.id)
-const activity = ref({
-  id: route.params.id,
-  name: 'Medina of Tunis',
-  city: 'Tunis',
-  tags: ['Culture', 'History', 'UNESCO'],
-  rating: 4.8,
-  price: '25 TND',
-  duration: '3–4 hours',
-  difficulty: 'Easy',
-  season: 'Spring / Autumn',
-  description: 'The Medina of Tunis is a UNESCO World Heritage Site and one of the finest examples of Arab-Muslim civilisation. Wander through winding streets lined with mosques, palaces, and bustling souks.',
-  image: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=1200',
+const { getActivityById, activities } = useActivities()
+const { fetchReviewsByActivity, addReview } = useReviews()
+const { currentUser } = useAuth()
+
+const activityId = computed(() => Number(route.params.id))
+
+const activity = ref(null)
+const reviews = ref([])
+
+onMounted(() => {
+  const found = getActivityById(activityId.value)
+  activity.value = found || {
+    id: activityId.value,
+    name: 'Activity not found',
+    city: '',
+    tags: [],
+    rating: 0,
+    price: '',
+    duration: '',
+    difficulty: '',
+    season: '',
+    description: '',
+    image: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=1200',
+  }
+  reviews.value = fetchReviewsByActivity(activityId.value)
 })
 
-const reviews = ref([
-  { id: 1, user: 'Amira B.', date: 'Feb 2024', rating: 5, text: 'Absolutely magical place. The souks are full of life!' },
-  { id: 2, user: 'Karim T.', date: 'Jan 2024', rating: 4, text: 'Rich history and culture. A must-visit for history lovers.' },
-  { id: 3, user: 'Sana M.', date: 'Dec 2023', rating: 5, text: 'Stunning architecture. Highly recommend the guided tour.' },
-])
+function handleReviewSubmitted({ rating, text }) {
+  const newReview = addReview(activityId.value, currentUser.value, { rating, text })
+  if (newReview) {
+    reviews.value = fetchReviewsByActivity(activityId.value)
+  }
+}
 
-const related = ref([
-  { id: 5, name: 'Sidi Bou Said', city: 'Tunis', rating: 4.6, image: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=200' },
-  { id: 7, name: 'Bardo Museum', city: 'Tunis', rating: 4.5, image: 'https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=200' },
-  { id: 4, name: 'El Jem Amphitheatre', city: 'El Jem', rating: 4.8, image: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=200' },
-])
+const related = computed(() => {
+  if (!activity.value) return []
+  return activities.value
+    .filter((a) => a.id !== activityId.value && (a.city === activity.value.city || a.tags.some((t) => activity.value.tags.includes(t))))
+    .slice(0, 3)
+})
 </script>
