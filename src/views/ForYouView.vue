@@ -106,7 +106,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useActivities } from '../composables/useActivities'
 
 const interests = ['Sea', 'Desert', 'Hiking', 'Culture', 'Food', 'History']
 const cities = ['Tunis', 'Hammamet', 'Sousse', 'Douz', 'Djerba', 'Sfax', 'El Jem']
@@ -115,14 +116,36 @@ const selectedCity = ref(null)
 const priceRange = ref([0, 300])
 const selectedDifficulty = ref(null)
 
-const activities = ref([
-  { id: 1, name: 'Medina of Tunis', city: 'Tunis', tags: ['Culture', 'History'], rating: 4.8, saved: false, image: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400' },
-  { id: 2, name: 'Sahara Desert Tour', city: 'Douz', tags: ['Desert', 'Adventure'], rating: 4.9, saved: false, image: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400' },
-  { id: 3, name: 'Hammamet Beach', city: 'Hammamet', tags: ['Sea', 'Relax'], rating: 4.7, saved: true, image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400' },
-  { id: 4, name: 'El Jem Tour', city: 'El Jem', tags: ['History', 'Culture'], rating: 4.8, saved: false, image: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400' },
-  { id: 5, name: 'Sidi Bou Said', city: 'Tunis', tags: ['Culture', 'City Life'], rating: 4.6, saved: false, image: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=400' },
-  { id: 6, name: 'Djerba Island', city: 'Djerba', tags: ['Sea', 'Relax'], rating: 4.7, saved: false, image: 'https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=400' },
-])
+const difficultyLabels = ['Easy', 'Moderate', 'Hard']
+
+const { activities: allActivities, fetchActivities } = useActivities()
+
+onMounted(() => {
+  fetchActivities()
+})
+
+const activities = computed(() => {
+  let result = allActivities.value
+  if (selectedInterests.value.length > 0) {
+    const chosen = selectedInterests.value.map((i) => interests[i])
+    result = result.filter((a) => a.tags.some((t) => chosen.includes(t)))
+  }
+  if (selectedCity.value) {
+    result = result.filter((a) => a.city === selectedCity.value)
+  }
+  if (selectedDifficulty.value !== null && selectedDifficulty.value !== undefined) {
+    const label = difficultyLabels[selectedDifficulty.value]
+    if (label) result = result.filter((a) => a.difficulty === label)
+  }
+  // Price filter: parse numeric value from strings like "25 TND", "Free", "90 TND"
+  result = result.filter((a) => {
+    if (a.price === 'Free' || a.price === '0') return priceRange.value[0] <= 0
+    const num = parseInt(a.price)
+    if (isNaN(num)) return true
+    return num >= priceRange.value[0] && num <= priceRange.value[1]
+  })
+  return result
+})
 
 const similarUsers = [
   { name: 'Amira Ben Ali', username: 'amira_b', interests: ['Desert', 'Hiking', 'Food'] },

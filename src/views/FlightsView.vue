@@ -133,6 +133,7 @@
 <script setup>
 import { ref } from 'vue'
 import EmptyState from '../components/EmptyState.vue'
+import { useFlights } from '../composables/useFlights'
 
 const origin = ref('')
 const destination = ref('Tunis (TUN)')
@@ -148,15 +149,10 @@ const selectedStops = ref([])
 const destinations = ['Tunis (TUN)', 'Djerba (DJE)', 'Monastir (MIR)', 'Sfax (SFA)', 'Tozeur (TOE)']
 const cabinClasses = ['Economy', 'Premium Economy', 'Business', 'First Class']
 
-function searchFlights() {
-  searched.value = true
-}
+const { results: flights, searching, searchFlights: doSearch } = useFlights()
 
-const flights = ref([
-  { id: 1, airline: 'Tunisair', flightNo: 'TU 751', departTime: '08:30', arriveTime: '11:45', origin: 'CDG', destination: 'TUN', duration: '3h 15m', stops: 'Non-stop', price: 189 },
-  { id: 2, airline: 'Air France', flightNo: 'AF 1530', departTime: '10:20', arriveTime: '14:05', origin: 'CDG', destination: 'TUN', duration: '3h 45m', stops: 'Non-stop', price: 245 },
-  { id: 3, airline: 'Nouvelair', flightNo: 'BJ 410', departTime: '14:15', arriveTime: '17:30', origin: 'ORY', destination: 'DJE', duration: '3h 15m', stops: 'Non-stop', price: 167 },
-  { id: 4, airline: 'Transavia', flightNo: 'TO 3415', departTime: '06:45', arriveTime: '12:30', origin: 'CDG', destination: 'TUN', duration: '5h 45m', stops: '1 Stop', price: 128 },
-  { id: 5, airline: 'Ryanair', flightNo: 'FR 5522', departTime: '19:00', arriveTime: '23:45', origin: 'BRU', destination: 'TUN', duration: '4h 45m', stops: 'Non-stop', price: 98 },
-])
+async function searchFlights() {
+  searched.value = true
+  await doSearch({ origin: origin.value, destination: destination.value })
+}
 </script>

@@ -37,7 +37,7 @@
 import { ref, computed } from 'vue'
 
 const props = defineProps({ modelValue: Boolean })
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'submitted'])
 
 const dialog = computed({
   get: () => props.modelValue,
@@ -49,7 +49,11 @@ const reviewText = ref('')
 const photos = ref([])
 
 function submit() {
-  // Mock submit
+  if (!reviewText.value.trim()) return
+  emit('submitted', { rating: rating.value, text: reviewText.value.trim() })
+  rating.value = 5
+  reviewText.value = ''
+  photos.value = []
   dialog.value = false
 }
 </script>

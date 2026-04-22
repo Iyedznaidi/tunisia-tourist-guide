@@ -129,6 +129,8 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal.vue'
+import { useItineraries } from '../composables/useItineraries'
+import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
 const deleteDialog = ref(false)
@@ -137,6 +139,9 @@ const title = ref('My Tunisia Adventure')
 const startDate = ref('')
 const endDate = ref('')
 const visibility = ref('public')
+
+const { createItinerary } = useItineraries()
+const { currentUser } = useAuth()
 
 const mockActivities = [
   { name: 'Explore the Medina of Tunis', city: 'Tunis', duration: '3–4h', icon: 'mdi-bank' },
@@ -172,7 +177,30 @@ function moveActivity(dayIndex, actIndex, dir) {
   acts[actIndex + dir] = temp
 }
 
+function confirmDelete() {
+  // placeholder for delete logic
+}
+
 function publish() {
-  router.push('/itineraries/1')
+  const saved = createItinerary(
+    {
+      title: title.value,
+      startDate: startDate.value,
+      endDate: endDate.value,
+      visibility: visibility.value,
+      days: itinerary.value.map((d) => ({
+        date: d.date,
+        activities: d.activities.map((a) => ({
+          name: a.name,
+          note: a.city,
+          time: '',
+          image: '',
+        })),
+      })),
+      photos: [],
+    },
+    currentUser.value,
+  )
+  router.push(`/itineraries/${saved.id}`)
 }
 </script>
