@@ -62,8 +62,8 @@
           <div class="text-h6 font-weight-bold mb-2">About this Experience</div>
           <p class="text-body-1 text-medium-emphasis mb-6">{{ event.description }}</p>
 
-          <!-- Event Chat — visible only to joined users -->
-          <template v-if="hasJoined">
+          <!-- Event Chat — visible to joined users OR the host -->
+          <template v-if="canAccessChat">
             <div class="text-h6 font-weight-bold mb-4">
               <v-icon color="primary" class="mr-1">mdi-chat-outline</v-icon>
               Event Chat
@@ -71,7 +71,10 @@
             <EventChat
               :messages="eventMessages"
               :current-user="currentUser"
+              :is-host="isHost"
+              :event-id="eventId"
               @send="(text) => handleSend(text)"
+              @clear-chat="clearEventChat"
             />
           </template>
 
@@ -105,7 +108,13 @@
               {{ event.maxAttendees - event.attendees }} spots remaining
             </div>
 
+            <!-- Host cannot join/leave their own event -->
+            <v-btn v-if="isHost" disabled color="primary" variant="elevated" class="w-100">
+              <v-icon start>mdi-check</v-icon>
+              You are the Host
+            </v-btn>
             <JoinEventButton
+              v-else
               :joined="hasJoined"
               :event-id="event.id"
               @join="joinEvent"
@@ -122,7 +131,10 @@
               </v-avatar>
               <div>
                 <div class="text-body-2 font-weight-bold">{{ event.hostName }}</div>
-                <div class="text-caption text-medium-emphasis">Local Host</div>
+                <div v-if="isHost" class="text-caption text-medium-emphasis font-weight-bold" style="color: #E07A2F;">
+                  You (Host)
+                </div>
+                <div v-else class="text-caption text-medium-emphasis">Local Host</div>
               </div>
             </div>
           </v-card>
@@ -158,13 +170,22 @@ import EmptyState from '../components/EmptyState.vue'
 
 const route = useRoute()
 const { currentUser } = useAuth()
-const { loading, fetchEvents, joinEvent, leaveEvent, isJoined, sendMessage, getEventById, getMessages } =
+const { loading, fetchEvents, joinEvent, leaveEvent, isJoined, sendMessage, getEventById, getMessages, clearEventChat } =
   useEvents()
 
 const eventId = computed(() => Number(route.params.id))
 const event = computed(() => getEventById(eventId.value))
 const hasJoined = computed(() => isJoined(eventId.value))
 const eventMessages = computed(() => getMessages(eventId.value))
+
+// ✅ Host can access chat for their own event
+const isHost = computed(() => {
+  if (!currentUser.value || !event.value) return false
+  return currentUser.value.id === event.value.hostId
+})
+
+// ✅ Can access chat if joined OR if host
+const canAccessChat = computed(() => hasJoined.value || isHost.value)
 
 function handleSend(text) {
   sendMessage(eventId.value, currentUser.value, text)
