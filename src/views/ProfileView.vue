@@ -70,9 +70,9 @@
         <v-row>
           <v-col v-for="it in itineraries" :key="it.id" cols="12" sm="6" md="4">
             <v-card rounded="xl" :to="`/itineraries/${it.id}`">
-              <v-img :src="it.image" height="150" cover />
+              <v-img :src="(it.photos && it.photos.length ? it.photos[0] : it.image) || 'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=400'" height="150" cover />
               <v-card-title class="text-body-1">{{ it.title }}</v-card-title>
-              <v-card-subtitle>{{ it.days }} days · {{ it.views }} views</v-card-subtitle>
+              <v-card-subtitle>{{ Array.isArray(it.days) ? it.days.length : it.days }} days · {{ it.views }} views</v-card-subtitle>
             </v-card>
           </v-col>
         </v-row>
@@ -141,9 +141,11 @@ import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import EmptyState from '../components/EmptyState.vue'
 import { useAuth } from '../composables/useAuth'
+import { useItineraries } from '../composables/useItineraries'
 
 const route = useRoute()
 const { isAuthenticated, currentUser, logout, updateProfile } = useAuth()
+const { getItinerariesByUser } = useItineraries()
 const tab = ref('itineraries')
 
 // Determine if we are viewing our own profile
@@ -162,7 +164,12 @@ const profile = computed(() => {
       location: currentUser.value.location || '',
       bio: currentUser.value.bio || '',
       interests: currentUser.value.interests || [],
-      stats: { itineraries: 0, followers: 0, following: 0, reviews: 0 },
+      stats: {
+        itineraries: ownItineraries.value.length,
+        followers: 0,
+        following: 0,
+        reviews: 0,
+      },
     }
   }
   // Fallback mock profile for other users
@@ -174,6 +181,25 @@ const profile = computed(() => {
     interests: ['Desert', 'Culture', 'Food', 'Hiking', 'History'],
     stats: { itineraries: 12, followers: 840, following: 320, reviews: 45 },
   }
+})
+
+// Itineraries for own profile from composable; fallback mock for others
+const ownItineraries = computed(() => {
+  if (isOwnProfile.value && currentUser.value) {
+    return getItinerariesByUser(currentUser.value.id)
+  }
+  return []
+})
+
+const itineraries = computed(() => {
+  if (isOwnProfile.value) {
+    return ownItineraries.value
+  }
+  return [
+    { id: 1, title: 'Best of Tunisia in 7 Days', days: 7, views: 1240, image: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=400' },
+    { id: 2, title: 'Coastal Road Trip', days: 5, views: 860, image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400' },
+    { id: 3, title: 'Sahara Weekend', days: 3, views: 620, image: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400' },
+  ]
 })
 
 // Edit profile form
@@ -197,12 +223,6 @@ function saveProfile() {
   })
   editDialog.value = false
 }
-
-const itineraries = ref([
-  { id: 1, title: 'Best of Tunisia in 7 Days', days: 7, views: 1240, image: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=400' },
-  { id: 2, title: 'Coastal Road Trip', days: 5, views: 860, image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400' },
-  { id: 3, title: 'Sahara Weekend', days: 3, views: 620, image: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400' },
-])
 
 const photos = ref([
   'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=300',

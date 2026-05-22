@@ -117,8 +117,8 @@
               v-else
               :joined="hasJoined"
               :event-id="event.id"
-              @join="joinEvent"
-              @leave="leaveEvent"
+              @join="(id) => joinEvent(id, currentUser.value)"
+              @leave="(id) => leaveEvent(id, currentUser.value)"
             />
           </v-card>
 
@@ -175,7 +175,7 @@ const { loading, fetchEvents, joinEvent, leaveEvent, isJoined, sendMessage, getE
 
 const eventId = computed(() => Number(route.params.id))
 const event = computed(() => getEventById(eventId.value))
-const hasJoined = computed(() => isJoined(eventId.value))
+const hasJoined = computed(() => isJoined(eventId.value, currentUser.value))
 const eventMessages = computed(() => getMessages(eventId.value))
 
 // ✅ Host can access chat for their own event

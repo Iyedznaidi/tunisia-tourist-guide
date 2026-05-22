@@ -89,6 +89,9 @@
 </template>
 
 <script setup>
+import { computed, onMounted } from 'vue'
+import { useActivities } from '../composables/useActivities'
+
 const interestChips = [
   { label: 'Sea & Beach', icon: 'mdi-waves' },
   { label: 'Desert', icon: 'mdi-terrain' },
@@ -98,13 +101,18 @@ const interestChips = [
   { label: 'History', icon: 'mdi-bank' },
 ]
 
-const featured = [
-  { id: 1, name: 'Medina of Tunis', city: 'Tunis', rating: 4.8, image: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400' },
-  { id: 2, name: 'Sahara Desert Tour', city: 'Douz', rating: 4.9, image: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400' },
-  { id: 3, name: 'Hammamet Beach', city: 'Hammamet', rating: 4.7, image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400' },
-  { id: 4, name: 'El Jem Amphitheatre', city: 'El Jem', rating: 4.8, image: 'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400' },
-  { id: 5, name: 'Sidi Bou Said', city: 'Tunis', rating: 4.6, image: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=400' },
-]
+const { activities: allActivities, fetchActivities } = useActivities()
+
+onMounted(() => {
+  fetchActivities()
+})
+
+// Show the 5 highest-rated activities as featured destinations
+const featured = computed(() =>
+  [...allActivities.value]
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 5),
+)
 
 const quickLinks = [
   { title: 'Plan an Itinerary', desc: 'Build your perfect Tunisia trip', icon: 'mdi-calendar-edit', color: 'primary', iconColor: 'primary', to: '/itineraries/create' },

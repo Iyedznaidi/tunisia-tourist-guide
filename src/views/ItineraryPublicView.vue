@@ -1,5 +1,6 @@
 <template>
   <v-container class="py-8">
+    <template v-if="itinerary">
     <!-- Header: user info + itinerary cover -->
     <v-card rounded="xl" class="mb-6 overflow-hidden" elevation="3">
       <v-img src="https://images.unsplash.com/photo-1564507592333-c60657eea523?w=1200" height="240" cover>
@@ -16,8 +17,8 @@
             <v-icon color="white">mdi-account</v-icon>
           </v-avatar>
           <div>
-            <div class="font-weight-bold">{{ itinerary.author.name }}</div>
-            <div class="text-caption text-medium-emphasis">@{{ itinerary.author.username }}</div>
+            <div class="font-weight-bold">{{ itinerary.authorName }}</div>
+            <div class="text-caption text-medium-emphasis">@{{ itinerary.authorUsername }}</div>
           </div>
           <v-spacer />
           <v-btn color="primary" variant="tonal" size="small">
@@ -89,9 +90,9 @@
             <v-avatar color="secondary" size="30" class="mr-2">
               <v-icon color="white" size="14">mdi-account</v-icon>
             </v-avatar>
-            <span class="text-subtitle-2 font-weight-bold">{{ comment.user }}</span>
+            <span class="text-subtitle-2 font-weight-bold">{{ comment.authorName }}</span>
             <v-spacer />
-            <span class="text-caption text-medium-emphasis">{{ comment.date }}</span>
+            <span class="text-caption text-medium-emphasis">{{ new Date(comment.createdAt).toLocaleDateString() }}</span>
           </div>
           <p class="text-body-2 ml-8">{{ comment.text }}</p>
         </v-card>
@@ -116,16 +117,55 @@
 
     <!-- Lightbox -->
     <ImageLightbox v-model="lightboxOpen" :photos="itinerary.photos" :initialIndex="lightboxIndex" />
+    </template>
   </v-container>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import ImageLightbox from '../components/ImageLightbox.vue'
+import { useItineraries } from '../composables/useItineraries'
+import { useComments } from '../composables/useComments'
+import { useAuth } from '../composables/useAuth'
 
+const route = useRoute()
 const lightboxOpen = ref(false)
 const lightboxIndex = ref(0)
 const newComment = ref('')
+
+const { getItineraryById } = useItineraries()
+const { fetchComments, addComment } = useComments()
+const { currentUser } = useAuth()
+
+const itineraryId = computed(() => Number(route.params.id))
+
+const itinerary = ref(null)
+const comments = ref([])
+
+const similar = ref([
+  { id: 2, title: 'Tunisia Coastal Road Trip', days: 5, author: 'ahmed_adventures', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400' },
+  { id: 3, title: 'Desert & Oasis Adventure', days: 4, author: 'ahmed_adventures', image: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400' },
+])
+
+onMounted(() => {
+  const found = getItineraryById(itineraryId.value)
+  if (found) {
+    itinerary.value = found
+  } else {
+    // Fallback for unknown ids
+    itinerary.value = {
+      title: 'Itinerary not found',
+      startDate: '',
+      endDate: '',
+      authorName: '',
+      authorUsername: '',
+      photos: [],
+      days: [],
+    }
+  }
+  comments.value = fetchComments(itineraryId.value)
+})
 
 function openLightbox(index) {
   lightboxIndex.value = index
@@ -134,53 +174,10 @@ function openLightbox(index) {
 
 function postComment() {
   if (!newComment.value.trim()) return
-  comments.value.unshift({ id: Date.now(), user: 'You', date: 'Just now', text: newComment.value })
+  const saved = addComment(itineraryId.value, currentUser.value, newComment.value)
+  if (saved) {
+    comments.value = fetchComments(itineraryId.value)
+  }
   newComment.value = ''
 }
-
-const itinerary = ref({
-  title: 'Best of Tunisia in 7 Days',
-  startDate: 'March 10, 2024',
-  endDate: 'March 17, 2024',
-  author: { name: 'Amira Ben Ali', username: 'amira_b' },
-  photos: [
-    'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400',
-    'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400',
-    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400',
-    'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=400',
-    'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400',
-    'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=400',
-  ],
-  days: [
-    {
-      date: 'March 10',
-      activities: [
-        { time: '09:00', name: 'Medina of Tunis', note: 'Explore the winding alleyways', image: 'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=300' },
-        { time: '14:00', name: 'Sidi Bou Said', note: 'The iconic blue-and-white village', image: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?w=300' },
-      ],
-    },
-    {
-      date: 'March 11',
-      activities: [
-        { time: '08:00', name: 'Sahara Desert Tour', note: 'Full day Sahara experience from Douz', image: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=300' },
-      ],
-    },
-    {
-      date: 'March 12',
-      activities: [
-        { time: '10:00', name: 'Hammamet Beach', note: 'Relax by the Mediterranean', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=300' },
-      ],
-    },
-  ],
-})
-
-const comments = ref([
-  { id: 1, user: 'Karim T.', date: '2 days ago', text: 'Amazing itinerary! I did something similar last summer.' },
-  { id: 2, user: 'Sana M.', date: '3 days ago', text: 'Adding this to my wish list 🌟' },
-])
-
-const similar = ref([
-  { id: 2, title: 'Tunisia Coastal Road Trip', days: 5, author: 'karim_t', image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400' },
-  { id: 3, title: 'Desert & Oasis Adventure', days: 4, author: 'sana_m', image: 'https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400' },
-])
 </script>
